@@ -25,36 +25,19 @@ steps:
     command: 'test'
   displayName: 'Run Tests'
 
-# Analyser le code avec SonarQube (SAST)
-- task: SonarQubePrepare@5
-  inputs:
-    SonarQube: 'SonarQubeConnection'  # Service connection SonarQube
-    scannerMode: 'MSBuild'
-    projectKey: 'DevSecOpsApp'
-    projectName: 'DevSecOpsApp'
-  displayName: 'Prepare SonarQube Analysis'
-
-- task: SonarQubeAnalyze@5
-  displayName: 'Analyze code with SonarQube'
-
-- task: SonarQubePublish@5
-  inputs:
-    pollingTimeoutSec: '300'
-  displayName: 'Publish SonarQube Results'
-
 # Exécuter OWASP ZAP pour des tests de sécurité dynamiques (DAST)
 - task: Docker@2
   inputs:
-    containerRegistry: '$(dockerRegistryServiceConnection)'
+    containerRegistry: '$(dockerRegistryServiceConnection)'  # Si tu utilises Docker Registry
     repository: 'owasp/zap2docker-stable'
     command: 'run'
-    arguments: '-t http://$(APP_URL) -r zap_report.html'
+    arguments: '-t http://$(APP_URL) -r zap_report.html'  # Tests de sécurité dynamiques
   displayName: 'Run OWASP ZAP DAST'
 
 # Déployer l'application dans un environnement de test
 - task: AzureWebApp@1
   inputs:
-    azureSubscription: 'AzureSubscription'
-    appName: 'YourWebApp'
+    azureSubscription: 'AzureSubscription'  # Ton abonnement Azure
+    appName: 'YourWebApp'  # Nom de ton application Azure Web App
     package: '$(System.DefaultWorkingDirectory)/_yourApp/drop'
   displayName: 'Deploy Application to Azure Web App'

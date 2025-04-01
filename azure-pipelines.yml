@@ -1,43 +1,28 @@
 trigger:
   branches:
     include:
-      - master  # Déclenche le pipeline sur chaque push vers la branche master
+      - master  # ou ta branche de production
 
 pool:
-  vmImage: 'ubuntu-latest'  # Utilise une image Ubuntu pour exécuter les tâches
+  vmImage: 'ubuntu-latest'
+
+variables:
+  APP_URL: 'http://localhost:3000'  # Remplace par l'URL de ton application
 
 steps:
-# Installer Node.js
-- task: UseNode@2
-  inputs:
-    versionSpec: '14.x'
-  displayName: 'Install Node.js'
-
-# Installer les dépendances de l'application
-- task: npm@1
-  inputs:
-    command: 'install'
-  displayName: 'Install dependencies'
-
-# Exécuter les tests unitaires (s'il y en a)
-- task: npm@1
-  inputs:
-    command: 'test'
-  displayName: 'Run Tests'
-
-# Exécuter OWASP ZAP pour des tests de sécurité dynamiques (DAST)
+# 1. Pull de l'image OWASP ZAP depuis Docker Hub
 - task: Docker@2
   inputs:
-    containerRegistry: '$(dockerRegistryServiceConnection)'  # Si tu utilises Docker Registry
+    command: 'pull'
+    containerRegistry: 'dockerhub'  # Nom de ta connexion de service Docker
     repository: 'owasp/zap2docker-stable'
-    command: 'run'
-    arguments: '-t http://$(APP_URL) -r zap_report.html'  # Tests de sécurité dynamiques
-  displayName: 'Run OWASP ZAP DAST'
+    tags: 'latest'
+  displayName: 'Pull OWASP ZAP Image'
 
-# Déployer l'application dans un environnement de test
-- task: AzureWebApp@1
-  inputs:
-    azureSubscription: 'AzureSubscription'  # Ton abonnement Azure
-    appName: 'YourWebApp'  # Nom de ton application Azure Web App
-    package: '$(System.DefaultWorkingDirectory)/_yourApp/drop'
-  displayName: 'Deploy Application to Azure Web App'
+# 2. Exécuter OWASP ZAP via Docker
+- script: |
+    docker run --rm \
+      -v $(System.DefaultWorkingDirectory):/zap/wrk/:rw \
+      -e TARGET=$APP_URL \
+      owasp/zap2docker-stable zap-full-scan.py -t $TARGET
+  displayName: 'Run OWASP ZAP DAST Scan'

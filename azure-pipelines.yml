@@ -1,0 +1,60 @@
+trigger:
+  branches:
+    include:
+      - master  # Déclenche le pipeline sur chaque push vers la branche master
+
+pool:
+  vmImage: 'ubuntu-latest'  # Utilise une image Ubuntu pour exécuter les tâches
+
+steps:
+# Installer Node.js
+- task: UseNode@2
+  inputs:
+    versionSpec: '14.x'
+  displayName: 'Install Node.js'
+
+# Installer les dépendances de l'application
+- task: npm@1
+  inputs:
+    command: 'install'
+  displayName: 'Install dependencies'
+
+# Exécuter les tests unitaires (s'il y en a)
+- task: npm@1
+  inputs:
+    command: 'test'
+  displayName: 'Run Tests'
+
+# Analyser le code avec SonarQube (SAST)
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'SonarQubeConnection'  # Service connection SonarQube
+    scannerMode: 'MSBuild'
+    projectKey: 'DevSecOpsApp'
+    projectName: 'DevSecOpsApp'
+  displayName: 'Prepare SonarQube Analysis'
+
+- task: SonarQubeAnalyze@5
+  displayName: 'Analyze code with SonarQube'
+
+- task: SonarQubePublish@5
+  inputs:
+    pollingTimeoutSec: '300'
+  displayName: 'Publish SonarQube Results'
+
+# Exécuter OWASP ZAP pour des tests de sécurité dynamiques (DAST)
+- task: Docker@2
+  inputs:
+    containerRegistry: '$(dockerRegistryServiceConnection)'
+    repository: 'owasp/zap2docker-stable'
+    command: 'run'
+    arguments: '-t http://$(APP_URL) -r zap_report.html'
+  displayName: 'Run OWASP ZAP DAST'
+
+# Déployer l'application dans un environnement de test
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: 'AzureSubscription'
+    appName: 'YourWebApp'
+    package: '$(System.DefaultWorkingDirectory)/_yourApp/drop'
+  displayName: 'Deploy Application to Azure Web App'

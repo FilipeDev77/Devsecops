@@ -14,7 +14,7 @@ steps:
 - task: Docker@2
   inputs:
     command: 'pull'
-    containerRegistry: 'dockerhub'  # Nom de ta connexion de service Docker
+    containerRegistry: 'Service_Docker'  # Nom de ta connexion de service Docker
     repository: 'owasp/zap2docker-stable'
     tags: 'latest'
   displayName: 'Pull OWASP ZAP Image'
